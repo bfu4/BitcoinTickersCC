@@ -1,3 +1,5 @@
+package com.github.bfu4;
+
 import com.github.bfu4.BitcoinTickersCC.web.BitcoinTickersCCFunctionalClient;
 import org.junit.Assert;
 import org.junit.Test;
