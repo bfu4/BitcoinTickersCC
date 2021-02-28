@@ -9,8 +9,10 @@ import com.github.bfu4.BitcoinTickersCC.obj.Rate;
 import com.github.bfu4.BitcoinTickersCC.obj.Ticker;
 import com.github.bfu4.BitcoinTickersCC.web.BitcoinTickersCCFunctionalClient;
 import com.github.bfu4.BitcoinTickersCC.web.json.JsonResponse;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
+import org.apache.cxf.Bus;
+import org.apache.cxf.BusFactory;
+import org.apache.cxf.transport.ConduitInitiatorManager;
+import org.apache.cxf.transport.http.HTTPTransportFactory;
 
 import java.util.logging.Logger;
 
@@ -36,6 +38,7 @@ public class BitcoinTickersCC implements IBitcoinTickersCC {
 
     public static void main(String[] args) {
         instance = getInstance();
+        instance.initializeCxf();
         instance.start();
     }
 
@@ -123,6 +126,13 @@ public class BitcoinTickersCC implements IBitcoinTickersCC {
     @Override
     public BitcoinTickersCCFunctionalClient getBlockchainEndpoint() {
         return blockchainEndpointClient;
+    }
+
+    // Apache CXF Shading error fixed via https://stackoverflow.com/a/38083881
+    public void initializeCxf() {
+        final Bus defaultBus = BusFactory.getDefaultBus();
+        final ConduitInitiatorManager extension = defaultBus.getExtension(ConduitInitiatorManager.class);
+        extension.registerConduitInitiator("http://cxf.apache.org/transports/http", new HTTPTransportFactory());
     }
 
 }
