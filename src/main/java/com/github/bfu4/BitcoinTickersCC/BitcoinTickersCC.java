@@ -2,11 +2,15 @@ package com.github.bfu4.BitcoinTickersCC;
 
 import com.github.bfu4.BitcoinTickersCC.except.AlreadyInstantiatedException;
 import com.github.bfu4.BitcoinTickersCC.except.ProcessStartedException;
+import com.github.bfu4.BitcoinTickersCC.except.RateNotFoundException;
+import com.github.bfu4.BitcoinTickersCC.obj.BitcoinEndpoint;
+import com.github.bfu4.BitcoinTickersCC.obj.BlockchainEndpoint;
 import com.github.bfu4.BitcoinTickersCC.obj.Rate;
 import com.github.bfu4.BitcoinTickersCC.obj.Ticker;
 import com.github.bfu4.BitcoinTickersCC.web.BitcoinTickersCCFunctionalClient;
-import com.github.bfu4.BitcoinTickersCC.web.json.BitcoinTickersCCJSONUtil;
 import com.github.bfu4.BitcoinTickersCC.web.json.JsonResponse;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 
 import java.util.logging.Logger;
 
@@ -14,8 +18,8 @@ public class BitcoinTickersCC implements IBitcoinTickersCC {
 
     private static BitcoinTickersCC instance;
 
-    private BitcoinTickersCCFunctionalClient blockchainEndpointClient;
-    private BitcoinTickersCCFunctionalClient bitcoinEndpointClient;
+    private BlockchainEndpoint blockchainEndpointClient;
+    private BitcoinEndpoint bitcoinEndpointClient;
 
     private boolean started;
 
@@ -60,7 +64,8 @@ public class BitcoinTickersCC implements IBitcoinTickersCC {
     /**
      * Start the main process
      */
-    public void start() {
+    public synchronized void start() {
+
         // Verify and make sure the process has not started.
         try {
             checkIfStarted();
@@ -68,41 +73,36 @@ public class BitcoinTickersCC implements IBitcoinTickersCC {
             return;
         }
 
-        this.bitcoinEndpointClient = new BitcoinTickersCCFunctionalClient(
-                "https://api.exchange.bitcoin.com/api/2/public/ticker",
-                "sell"
-        );
+        started = true;
 
-        this.blockchainEndpointClient = new BitcoinTickersCCFunctionalClient(
-                "https://blockchain.info/ticker",
-                "USD"
-        );
+        this.bitcoinEndpointClient = new BitcoinEndpoint();
+        this.blockchainEndpointClient = new BlockchainEndpoint();
 
-        JsonResponse blockchainEndpointResponse = this.blockchainEndpointClient.getResponse();
-        JsonResponse bitcoinEndpointResponse = this.bitcoinEndpointClient.getResponse();
-
+        JsonResponse blockchainEndpointResponse = this.blockchainEndpointClient.get();
+        JsonResponse bitcoinEndpointResponse = this.bitcoinEndpointClient.get();
 
         if (bitcoinEndpointResponse.getEntity() == null || blockchainEndpointResponse.getEntity() == null) {
             System.out.println("Missing a response from an endpoint, and could not continue.");
             return;
         }
 
-        float blockchainEndpointRate = this.blockchainEndpointClient.getRate(
-                blockchainEndpointClient.getNested(BitcoinTickersCCJSONUtil.jsonResponseToJson(
-                        blockchainEndpointResponse), blockchainEndpointClient.getJsonField()
-                )
-        );
+        try {
+            float blockchainEpPrice = blockchainEndpointClient.getSellRate("USD");
+            float btcEpPrice = bitcoinEndpointClient.getSellRate("USD");
 
-        float bitcoinEndpointRate = this.bitcoinEndpointClient.getRate(BitcoinTickersCCJSONUtil.jsonResponseToJson(bitcoinEndpointResponse));
+            Rate bitcoin = new Rate(btcEpPrice, Ticker.BTC, bitcoinEndpointClient);
+            Rate blockchain = new Rate(blockchainEpPrice, Ticker.BTC, blockchainEndpointClient);
 
-        Rate bitcoin = new Rate(bitcoinEndpointRate, Ticker.BTC);
-        Rate blockchain = new Rate(blockchainEndpointRate, Ticker.BTC);
+            Rate cheaperRate = btcEpPrice < blockchainEpPrice ? bitcoin : blockchain;
 
-        Rate cheaperRate = bitcoinEndpointRate < blockchainEndpointRate ? bitcoin : blockchain;
+            System.out.println("\t\t\t*=================== CHEAPER SELL PRICE ===================*");
+            System.out.println("\t" + cheaperRate);
+            System.out.println("\t\t\t*==========================================================*");
 
-        System.out.println("*========== CHEAPER SELL PRICE ==========*");
-        System.out.println("\t " + cheaperRate);
-        System.out.println("*========================================*");
+        } catch (RateNotFoundException e) {
+            System.out.println(e.getMessage());
+        }
+
     }
 
 

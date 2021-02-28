@@ -18,6 +18,5 @@ public interface FunctionalClient {
 
     String getClientEndpoint();
 
-    float getRate(JsonObject response);
 
 }
