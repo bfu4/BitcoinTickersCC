@@ -22,16 +22,18 @@ public class JsonResponse {
     public JsonResponse(Response response) {
         AtomicReference<String> ent = new AtomicReference<>();
         if (response != null) {
+            BufferedReader br = null;
             try {
-                BufferedReader br = new BufferedReader(
+                br = new BufferedReader(
                         new InputStreamReader(((InputStream) response.getEntity()))
                 );
                 br.lines().forEach(line -> {
                     ent.set(ent.get() != null ? ent.get() + line : "" + line);
                 });
-                br.close();
             } catch (Exception e) {
                 System.out.println("Could not get a legible response. Reason: " + e.getMessage());
+            } finally {
+                if (br != null) br.close();
             }
         }
         this.entity = ent.get();
