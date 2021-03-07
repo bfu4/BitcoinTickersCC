@@ -29,6 +29,7 @@ public class JsonResponse {
                 br.lines().forEach(line -> {
                     ent.set(ent.get() != null ? ent.get() + line : "" + line);
                 });
+                br.close();
             } catch (Exception e) {
                 System.out.println("Could not get a legible response. Reason: " + e.getMessage());
             }
