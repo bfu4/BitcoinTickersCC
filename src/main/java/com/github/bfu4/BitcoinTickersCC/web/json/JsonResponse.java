@@ -33,7 +33,11 @@ public class JsonResponse {
             } catch (Exception e) {
                 System.out.println("Could not get a legible response. Reason: " + e.getMessage());
             } finally {
-                if (br != null) br.close();
+                try {
+                    if (br != null) br.close();
+                } catch (Exception e) {
+                    System.out.println("Could not close the buffered reader!");  
+                }
             }
         }
         this.entity = ent.get();
